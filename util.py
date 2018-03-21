@@ -49,7 +49,11 @@ class Proxy(object):
 
 
 def str_to_int(string):
-    return int(string.replace(',', ''))
+    return int(float(string.replace(',', ''))) if string[0] != '-' else 0
+
+
+def str_to_float(string):
+    return float(string.replace(',', '')) if string[0] != '-' else 0.0
 
 
 proxy = Proxy()
