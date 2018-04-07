@@ -28,13 +28,13 @@ class Proxy(object):
     def get(self, url):
         while True:
             try:
-                text = requests.get(url, headers=self.headers).text
+                resp = requests.get(url, headers=self.headers)
             except Timeout:
                 time.sleep(60 * 15)
             else:
                 break
         self.increase_get_count()
-        return text
+        return resp
 
     def increase_get_count(self):
         self.get_count += 1
@@ -48,12 +48,27 @@ class Proxy(object):
         print('proxy connect to', self.locations[self.locindex])
 
 
+@attr.s
+class NoProxy(object):
+    headers = attr.ib(init=False, default={'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_10_1) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/39.0.2171.95 Safari/537.36'})
+
+    def __attrs_post_init__(self):
+        requests.session().keep_alive = False
+
+    def get(self, url):
+        return requests.get(url, headers=self.headers)
+
+
 def str_to_int(string):
-    return int(float(string.replace(',', ''))) if string[0] != '-' else 0
+    if isinstance(string, int):
+        return string
+    return int(float(string.replace(',', ''))) if string[:2] != '--' else 0
 
 
 def str_to_float(string):
-    return float(string.replace(',', '')) if string[0] != '-' else 0.0
+    if isinstance(string, float):
+        return string
+    return float(string.replace(',', '')) if string[:2] != '--' else 0.0
 
 
 proxy = Proxy()

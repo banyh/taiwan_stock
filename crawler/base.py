@@ -1,7 +1,8 @@
 # -*- coding: utf-8 -*-
 from __future__ import print_function, unicode_literals
+from crawler.holidaySchedule import HolidaySchedule, WorkdaySchedule
 from pymongo import MongoClient, ASCENDING
-from datetime import timedelta, datetime
+from datetime import timedelta, datetime, date
 import pytz
 import time
 
@@ -16,6 +17,20 @@ class TwseCrawlerDaily(object):
 
         if hasattr(self, 'name'):
             self.col = self.db[getattr(self, 'name')]
+
+    def timestamp(self):
+        return str(int(time.time() * 1000) - 500)
+
+    def isHoliday(self, day):
+        if isinstance(day, datetime):
+            day = date(day.year, day.month, day.day)
+        if day in HolidaySchedule:
+            return True
+        if day in WorkdaySchedule:
+            return False
+        if day.weekday() >= 5:  # 5=Saturday, 6=Sunday
+            return True
+        return False
 
     def _download_one_day(self, day):
         raise NotImplementedError
