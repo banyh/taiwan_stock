@@ -5,6 +5,7 @@ from pymongo import MongoClient, ASCENDING
 from datetime import timedelta, datetime, date
 import pytz
 import time
+from util import RetryException, HolidayException
 
 
 class TwseCrawlerDaily(object):
@@ -32,6 +33,20 @@ class TwseCrawlerDaily(object):
             return True
         return False
 
+    def get_json(self, day, name_field, value_field):
+        if self.isHoliday(day):
+            raise HolidayException()
+
+        try:
+            ts = self.timestamp()
+            self.js = js = proxy.get(self.url.format(day.year, day.month, day.day, ts)).json()
+            if value_field not in js or len(js[value_field]) == 0:
+                raise HolidayException()
+            assert len(js[name_field]) == len(js[value_field][0])
+        except:
+            proxy.increase_loc_index()
+            raise RetryException()
+
     def _download_one_day(self, day):
         raise NotImplementedError
 
@@ -42,11 +57,20 @@ class TwseCrawlerDaily(object):
 
         one_day = timedelta(days=1)
         day = from_date
+        timeout = 0
         while day <= to_date:
             if self.col.find_one({'_id': self.date_to_datetime(day)}):  # already exists
                 day += one_day
                 continue
-            result = self._download_one_day(day)
+            try:
+                result = self._download_one_day(day)
+            except RetryException:
+                timeout += 1
+                if timeout > 5:
+                    raise
+                continue
+            else:
+                timeout = 0
             if result:
                 self.col.insert_one(result)
                 print(day, len(result))

@@ -8,6 +8,14 @@ import attr
 import time
 
 
+class RetryException(Exception):
+    pass
+
+
+class HolidayException(Exception):
+    pass
+
+
 def get_windscribe_locations():
     loc = check_output(['windscribe', 'locations']).decode('utf8')
     return [re.split('  +', l)[1] for l in loc.split('\n')[1:] if l]
@@ -39,11 +47,11 @@ class Proxy(object):
     def increase_get_count(self):
         self.get_count += 1
         if self.get_count > 24:
-            self.get_count = 0
             self.increase_loc_index()
 
     def increase_loc_index(self):
         self.locindex = (self.locindex + 1) % len(self.locations)
+        self.get_count = 0
         call(['windscribe', 'connect', self.locations[self.locindex]])
         print('proxy connect to', self.locations[self.locindex])
 
