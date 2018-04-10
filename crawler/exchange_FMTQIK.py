@@ -1,4 +1,6 @@
 # -*- coding: utf-8 -*-
+"""最早資料為1990/01/04
+"""
 from __future__ import unicode_literals, print_function
 from crawler.base import TwseCrawlerDaily
 from util import str_to_int, str_to_float, proxy

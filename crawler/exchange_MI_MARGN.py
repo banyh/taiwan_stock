@@ -1,7 +1,9 @@
 # -*- coding: utf-8 -*-
+"""最早資料為2001/01/01
+"""
 from __future__ import unicode_literals, print_function
 from crawler.base import TwseCrawlerDaily
-from util import str_to_int, proxy, str_to_float, RetryException
+from util import str_to_int, proxy, str_to_float, RetryException, HolidayException
 import requests
 import csv
 import re
@@ -25,8 +27,8 @@ class MI_MARGN(TwseCrawlerDaily):
         data = dict()
         data['_id'] = self.date_to_datetime(day)
         data['TradingDay'] = True
-        for row in js['creditList']:
+        for row in self.js['creditList']:
             item_name = re.sub('\(.*?\)', '', row[0])
-            for name, value in zip(js['creditFields'][1:], row[1:]):
+            for name, value in zip(self.js['creditFields'][1:], row[1:]):
                 data[item_name + '_' + re.sub('\(.*?\)', '', name)] = str_to_int(value)
         return data

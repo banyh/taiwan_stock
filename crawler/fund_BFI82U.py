@@ -1,4 +1,6 @@
 # -*- coding: utf-8 -*-
+"""最早資料為2004/3/31
+"""
 from __future__ import unicode_literals, print_function
 from crawler.base import TwseCrawlerDaily
 from util import str_to_int, proxy, str_to_float, RetryException, HolidayException
@@ -25,10 +27,10 @@ class BFI82U(TwseCrawlerDaily):
         data = dict()
         data['_id'] = self.date_to_datetime(day)
         data['TradingDay'] = True
-        for row in js['data']:
+        for row in self.js['data']:
             item_name = row[0].replace(')', '').replace('(', '_')
             if row[0] == '合計':
                 continue
-            for name, value in zip(js['fields'][1:], row[1:]):
+            for name, value in zip(self.js['fields'][1:], row[1:]):
                 data[item_name + '_' + name] = str_to_int(value)
         return data

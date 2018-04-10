@@ -5,7 +5,7 @@ from pymongo import MongoClient, ASCENDING
 from datetime import timedelta, datetime, date
 import pytz
 import time
-from util import RetryException, HolidayException
+from util import RetryException, HolidayException, proxy
 
 
 class TwseCrawlerDaily(object):
@@ -25,11 +25,13 @@ class TwseCrawlerDaily(object):
     def isHoliday(self, day):
         if isinstance(day, datetime):
             day = date(day.year, day.month, day.day)
-        if day in HolidaySchedule:
-            return True
-        if day in WorkdaySchedule:
+        if day < date(2002, 1, 1):  # 在 holidaySchedule 中沒有2002以前的資料，所以一律視為上班日
             return False
-        if day.weekday() >= 5:  # 5=Saturday, 6=Sunday
+        if day in HolidaySchedule:  # 確定是假日
+            return True
+        if day in WorkdaySchedule:  # 確定是上班日
+            return False
+        if day.weekday() >= 5:  # 5=星期六, 6=星期日
             return True
         return False
 
@@ -40,9 +42,11 @@ class TwseCrawlerDaily(object):
         try:
             ts = self.timestamp()
             self.js = js = proxy.get(self.url.format(day.year, day.month, day.day, ts)).json()
-            if value_field not in js or len(js[value_field]) == 0:
+            if (value_field not in js) or (not js[value_field]):
                 raise HolidayException()
             assert len(js[name_field]) == len(js[value_field][0])
+        except HolidayException:
+            raise
         except:
             proxy.increase_loc_index()
             raise RetryException()
@@ -50,10 +54,13 @@ class TwseCrawlerDaily(object):
     def _download_one_day(self, day):
         raise NotImplementedError
 
-    def download(self, from_date, to_date):
+    def download(self, from_date=date(2004, 1, 1), to_date=date.today()):
         """將from_date到to_date之間所有資料抓下來，存到資料庫。
         """
         assert from_date < to_date
+        # 如果今天還沒收盤，不要抓今天的資料
+        if datetime.now().hour < 15 and to_date == date.today():
+            to_date = date.today() - timedelta(days=1)
 
         one_day = timedelta(days=1)
         day = from_date
