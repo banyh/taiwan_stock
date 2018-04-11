@@ -1,15 +1,83 @@
 # -*- coding: utf-8 -*-
 """程式交易員的基本類別。
 """
+from __future__ import unicode_literals, print_function
+from collections import defaultdict
+
+
+class Transaction(object):
+    def __init__(self, action, stock_id, n_shares, target_price=None):
+        self.stock_id = stock_id
+        self.n_shares = n_shares
+        if action == 'buy_at_open':
+            self.action = 'buy'
+            self.timing = 'open'
+            self.price = 'market'
+        elif action == 'sell_at_open':
+            self.action = 'sell'
+            self.timing = 'open'
+            self.price = 'market'
+        elif action == 'buy_at_close':
+            self.action = 'buy'
+            self.timing = 'close'
+            self.price = 'market'
+        elif action == 'sell_at_close':
+            self.action = 'sell'
+            self.timing = 'close'
+            self.price = 'market'
+        elif action == 'buy_at_target':
+            self.action = 'buy'
+            self.timing = 'any'
+            self.price = target_price
+        elif action == 'sell_at_target':
+            self.action = 'sell'
+            self.timing = 'any'
+            self.price = target_price
+        elif action == 'take_profit_for_short':
+            self.action = 'buy'
+            self.timing = 'take_profit'
+            self.price = target_price
+        elif action == 'take_profit_for_long':
+            self.action = 'sell'
+            self.timing = 'take_profit'
+            self.price = target_price
+        elif action == 'stop_loss_for_short':
+            self.action = 'buy'
+            self.timing = 'stop_loss'
+            self.price = target_price
+        elif action == 'stop_loss_for_long':
+            self.action = 'sell'
+            self.timing = 'stop_loss'
+            self.price = target_price
 
 
 class BaseBroker(object):
     """這是交易員的 base class。
     當回測開始時，回測程式會設定 broker.money(持有的現金) 及 broker.portfolio(持有的投資組合)。
     每一天，回測程式會呼叫append，交易員應該根據過去的資料，決定這一天要進行的交易，並傳回給回測。
-    交易的類型只有6種：以開盤價買賣、以收盤價買賣、以特定價格買賣。
-    以開盤價或收盤價的買賣，都可以掛市價單。
     """
+    def reset(self, money=0.0):
+        self.money = money
+        self.portfolio = defaultdict(int)  # mapping "stock_id" --> num_shares
+        self.portfolio_cost = defaultdict(float)  # mapping "stock_id" --> price_at_buying
+        self.stop_loss_value = defaultdict(float)  # mapping "stock_id" --> stop loss value
+        self.take_profit_value = defaultdict(float)  # mapping "stock_id" --> take profit value
+
+        self.buy_at_open = list()  # list of (stock_id, num_shares) 開盤時以市價買入
+        self.buy_at_close = list()  # list of (stock_id, num_shares) 收盤時以市價買入
+        self.buy_at_target = list()  # list of (stock_id, num_shares, price) 設法以目標價買入，如果目標價超過當日的價格區間，則以收盤價買入。
+        self.sell_at_open = list()  # list of (stock_id, num_shares) 開盤時以市價賣出
+        self.sell_at_close = list()  # list of (stock_id, num_shares) 收盤時以市價賣出
+        self.sell_at_target = list()  # list of (stock_id, num_shares, price) 設法以目標價賣出，如果目標價超過當日的價格區間，則以收盤價賣出。
+
+    def __init__(self):
+        self.reset()
+
+    def predict(self):
+        """根據目前cache中的歷史資料，預測明天要進行的交易。
+        """
+        raise NotImplementedError
+
     def append(self, one_day_data):
         """輸入「今天」的價格資料，傳回要進行的動作，並將今天的資料存入cache。
         動作的範例: [('buy', '0050', 53.20, 2000), ('sell', '2002', 21.80, 1000)]
@@ -18,64 +86,18 @@ class BaseBroker(object):
         """
         raise NotImplementedError
 
-    def buy_at_open(self, stock_id, n_shares='auto'):
-        return {
-            'action': 'buy',
-            'stock_id': stock_id,
-            'target_price': 'open',
-            'n_shares': n_shares,
-        }
-
-    def sell_at_open(self, stock_id, n_shares='auto'):
-        return {
-            'action': 'sell',
-            'stock_id': stock_id,
-            'target_price': 'open',
-            'n_shares': n_shares,
-        }
-
-    def buy_at_close(self, stock_id, n_shares='auto'):
-        return {
-            'action': 'buy',
-            'stock_id': stock_id,
-            'target_price': 'close',
-            'n_shares': n_shares,
-        }
-
-    def sell_at_close(self, stock_id, n_shares='auto'):
-        return {
-            'action': 'sell',
-            'stock_id': stock_id,
-            'target_price': 'close',
-            'n_shares': n_shares,
-        }
-
-    def buy_at_target(self, stock_id, target_price, n_shares='auto'):
-        """設法以目標價買入，如果目標價超過當日的價格區間，則以收盤價買入。
-        """
-        return {
-            'action': 'buy',
-            'stock_id': stock_id,
-            'target_price': target_price,
-            'n_shares': n_shares,
-        }
-
-    def sell_at_target(self, stock_id, target_price, n_shares='auto'):
-        """設法以目標價賣出，如果目標價超過當日的價格區間，則以收盤價賣出。
-        """
-        return {
-            'action': 'sell',
-            'stock_id': stock_id,
-            'target_price': target_price,
-            'n_shares': n_shares,
-        }
-
-    def stoploss_at_target(self, stock_id, target_price, n_shares='auto'):
-        """設法以目標價賣出，如果最高價低於目標價，則改以收盤價賣出。
-        """
-        return {
-            'action': 'stoploss',
-            'stock_id': stock_id,
-            'target_price': target_price,
-            'n_shares': n_shares,
-        }
+    def message(self):
+        msgs = []
+        for sid, n in self.buy_at_open:
+            msgs.append('[{}] 開盤時，掛市價單，買進{}股"{}"'.format(self.name, n, sid))
+        for sid, n in self.sell_at_open:
+            msgs.append('[{}] 開盤時，掛市價單，賣出{}股"{}"'.format(self.name, n, sid))
+        for sid, n, price in self.buy_at_target:
+            msgs.append('[{}] 盤中掛{}的買單，買進{}股"{}"'.format(self.name, price, n, sid))
+        for sid, n, price in self.sell_at_target:
+            msgs.append('[{}] 盤中掛{}的賣單，賣出{}股"{}"'.format(self.name, price, n, sid))
+        for sid, n in self.buy_at_close:
+            msgs.append('[{}] 收盤時，掛市價單，買進{}股"{}"'.format(self.name, n, sid))
+        for sid, n in self.sell_at_close:
+            msgs.append('[{}] 收盤時，掛市價單，賣出{}股"{}"'.format(self.name, n, sid))
+        return msgs
