@@ -2,6 +2,7 @@
 from __future__ import print_function, unicode_literals
 from broker.base import BaseBroker
 import numpy as np
+from collections import defaultdict
 
 
 class MAOnlyBroker(BaseBroker):
@@ -10,6 +11,7 @@ class MAOnlyBroker(BaseBroker):
     def __init__(self, stock_id):
         self.cache = []
         self.stock_id = stock_id
+        self.stop_loss = defaultdict(float)
         self.OP = stock_id + '_開盤價'
         self.ED = stock_id + '_收盤價'
         self.HI = stock_id + '_最高價'
@@ -29,16 +31,22 @@ class MAOnlyBroker(BaseBroker):
         ma10 = (prices[-10:] * w10).sum() / w10.sum()
         transaction = []
         if ma5 > ma10:
-            n = int(self.money / (self.cache[-1] * 1000)) * 1000  # 要買進的張數
+            n = int(self.money / (self.cache[-1] * 1000)) * 1000  # 可以買進的股數
             if n > 0:
-                transaction.append(('buy', self.stock_id, one_day_data[self.OP], n))
-                # 停損點設為 -0.5%
-                stop_loss_point = one_day_data[self.OP] * 0.995
-                if one_day_data[self.ED] < stop_loss_point:
-                    transaction.append(('sell', self.stock_id, stop_loss_point, n))
-        elif ma10 <= ma5:
+                transaction.append(self.buy_at_open(self.stock_id))  # 策略: 以開盤價買進
+                self.stop_loss[self.stock_id] = one_day_data[self.OP] * 0.995
+        elif ma10 < ma5:
             n = self.portfolio[self.stock_id]  # 全部賣出
             if n > 0:
-                transaction.append(('sell', self.stock_id, one_day_data[self.OP], n))
+                transaction.append(self.sell_at_open(self.stock_id))  # 策略: 以開盤價賣出
+                self.stop_loss[self.stock_id] = 0
+
+        # 如果最低價跌過停損點，表示我們會被洗出場
+        if self.portfolio[self.stock_id] > 0 and self.stop_loss[self.stock_id] > 0:
+            stop_loss = self.stop_loss[self.stock_id]
+            if one_day_data[self.LO] <= stop_loss:
+                n = self.portfolio[self.stock_id]
+                transaction.append(self.stoploss_at_target(self.stock_id, stop_loss))
+
         self.cache.append(one_day_data[self.ED])
         return transaction

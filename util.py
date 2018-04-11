@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 from __future__ import unicode_literals, print_function
 import requests
-from requests import Timeout
+from requests import Timeout, post
 import re
 from subprocess import check_output, call
 from datetime import date, timedelta
@@ -78,6 +78,10 @@ def str_to_float(string):
     if isinstance(string, float):
         return string
     return float(string.replace(',', '')) if string[:2] != '--' else 0.0
+
+
+def slack_log(text):
+    post('https://hooks.slack.com/services/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', json={'text': text})
 
 
 def daily_update(n_days_before=10):

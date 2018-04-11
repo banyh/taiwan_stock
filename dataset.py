@@ -32,7 +32,7 @@ class TwseDailyDataset(object):
                 data.update(result)
         return data
 
-    def gen_features(self, feature_names):
+    def gen_features(self, feature_names, only_trading_day=True):
         start_day = date(2004, 4, 1)
         end_day = date.today() if datetime.now().hour > 15 else date.today() - timedelta(days=1)
         dates = []
@@ -45,17 +45,20 @@ class TwseDailyDataset(object):
         features = np.zeros((len(dates), len(feature_names)), dtype=np.float32)
         cond = {n: 1 for n in feature_names}
         cond.update({'_id': 0})
-        print(cond)
 
         for i, day in enumerate(dates):
             feat = {}
             for c in self.collections:
                 feat.update(c.find_one({'_id': self.date_to_datetime(day)}, cond))
-            print(day, feat)
             for j, name in enumerate(feature_names):
                 if name in feat:
                     features[i, j] = feat[name]
                     masks[i, j] = True
-        return dates, masks, features
+
+        dates = np.array(dates)
+        if only_trading_day:
+            features = features[masks.min(axis=1)]
+            dates = dates[masks.min(axis=1)]
+        return dates, features
 
 dailydata = TwseDailyDataset()
