@@ -4,6 +4,7 @@ import requests
 from requests import Timeout
 import re
 from subprocess import check_output, call
+from datetime import date, timedelta
 import attr
 import time
 
@@ -77,6 +78,18 @@ def str_to_float(string):
     if isinstance(string, float):
         return string
     return float(string.replace(',', '')) if string[:2] != '--' else 0.0
+
+
+def daily_update(n_days_before=10):
+    from crawler.exchange_FMTQIK import FMTQIK
+    from crawler.exchange_MI_INDEX import MI_INDEX
+    from crawler.exchange_MI_MARGN import MI_MARGN
+    from crawler.exchange_STOCK_DAY import STOCK_DAY
+    from crawler.fund_BFI82U import BFI82U
+
+    crawlers = [FMTQIK(), MI_INDEX(), MI_MARGN(), STOCK_DAY(), BFI82U()]
+    for c in crawlers:
+        c.download(date.today() - timedelta(days=n_days_before))
 
 
 proxy = Proxy()
