@@ -84,16 +84,4 @@ def slack_log(text):
     post('https://hooks.slack.com/services/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', json={'text': text})
 
 
-def daily_update(n_days_before=10):
-    from crawler.exchange_FMTQIK import FMTQIK
-    from crawler.exchange_MI_INDEX import MI_INDEX
-    from crawler.exchange_MI_MARGN import MI_MARGN
-    from crawler.exchange_STOCK_DAY import STOCK_DAY
-    from crawler.fund_BFI82U import BFI82U
-
-    crawlers = [FMTQIK(), MI_INDEX(), MI_MARGN(), STOCK_DAY(), BFI82U()]
-    for c in crawlers:
-        c.download(date.today() - timedelta(days=n_days_before))
-
-
 proxy = Proxy()

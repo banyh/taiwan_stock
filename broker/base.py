@@ -5,52 +5,6 @@ from __future__ import unicode_literals, print_function
 from collections import defaultdict
 
 
-class Transaction(object):
-    def __init__(self, action, stock_id, n_shares, target_price=None):
-        self.stock_id = stock_id
-        self.n_shares = n_shares
-        if action == 'buy_at_open':
-            self.action = 'buy'
-            self.timing = 'open'
-            self.price = 'market'
-        elif action == 'sell_at_open':
-            self.action = 'sell'
-            self.timing = 'open'
-            self.price = 'market'
-        elif action == 'buy_at_close':
-            self.action = 'buy'
-            self.timing = 'close'
-            self.price = 'market'
-        elif action == 'sell_at_close':
-            self.action = 'sell'
-            self.timing = 'close'
-            self.price = 'market'
-        elif action == 'buy_at_target':
-            self.action = 'buy'
-            self.timing = 'any'
-            self.price = target_price
-        elif action == 'sell_at_target':
-            self.action = 'sell'
-            self.timing = 'any'
-            self.price = target_price
-        elif action == 'take_profit_for_short':
-            self.action = 'buy'
-            self.timing = 'take_profit'
-            self.price = target_price
-        elif action == 'take_profit_for_long':
-            self.action = 'sell'
-            self.timing = 'take_profit'
-            self.price = target_price
-        elif action == 'stop_loss_for_short':
-            self.action = 'buy'
-            self.timing = 'stop_loss'
-            self.price = target_price
-        elif action == 'stop_loss_for_long':
-            self.action = 'sell'
-            self.timing = 'stop_loss'
-            self.price = target_price
-
-
 class BaseBroker(object):
     """這是交易員的 base class。
     當回測開始時，回測程式會設定 broker.money(持有的現金) 及 broker.portfolio(持有的投資組合)。

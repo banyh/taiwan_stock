@@ -41,7 +41,7 @@ class TwseDailyDataset(object):
             dates.append(day)
             day += timedelta(days=1)
 
-        masks = np.zeros((len(dates), len(feature_names)), dtype=bool)
+        masks = np.zeros(len(dates), dtype=bool)
         features = np.zeros((len(dates), len(feature_names)), dtype=np.float32)
         cond = {n: 1 for n in feature_names}
         cond.update({'_id': 0})
@@ -49,16 +49,19 @@ class TwseDailyDataset(object):
         for i, day in enumerate(dates):
             feat = {}
             for c in self.collections:
-                feat.update(c.find_one({'_id': self.date_to_datetime(day)}, cond))
+                result = c.find_one({'_id': self.date_to_datetime(day)}, cond)
+                if result:
+                    feat.update(result)
+            if feat:
+                masks[i] = True
             for j, name in enumerate(feature_names):
                 if name in feat:
                     features[i, j] = feat[name]
-                    masks[i, j] = True
 
         dates = np.array(dates)
         if only_trading_day:
-            features = features[masks.min(axis=1)]
-            dates = dates[masks.min(axis=1)]
+            features = features[masks]
+            dates = dates[masks]
         return dates, features
 
 dailydata = TwseDailyDataset()
